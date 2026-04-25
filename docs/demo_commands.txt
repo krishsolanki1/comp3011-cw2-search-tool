@@ -1,0 +1,107 @@
+COMP3011 CW2 -- Video Demo Commands
+=====================================
+Run these commands in order during the recording.
+Each section is labelled with the approximate video timestamp.
+
+----------------------------------------------------------------------
+[0:20] OPEN TERMINAL -- navigate to the project folder
+----------------------------------------------------------------------
+
+cd path/to/comp3011-cw2-search-tool
+
+
+----------------------------------------------------------------------
+[0:25] START THE INTERACTIVE SHELL
+----------------------------------------------------------------------
+
+python -m src.main
+
+
+----------------------------------------------------------------------
+[0:35] INSIDE THE SHELL -- run these commands one by one
+----------------------------------------------------------------------
+
+help
+
+build
+
+load
+
+print good
+
+print nonsense
+
+find indifference
+
+find good friends
+
+find bananaaaaa
+
+find
+
+stats
+
+exit
+
+
+----------------------------------------------------------------------
+[3:15] BACK IN THE TERMINAL -- run tests with coverage
+----------------------------------------------------------------------
+
+pytest --cov=src --cov-report=term-missing
+
+
+----------------------------------------------------------------------
+[3:45] SHOW GIT HISTORY
+----------------------------------------------------------------------
+
+git log --oneline --graph --decorate -n 12
+
+
+----------------------------------------------------------------------
+EXPECTED OUTPUT NOTES
+----------------------------------------------------------------------
+
+build:
+  Crawled 10 page(s). Building index...
+  Unique terms: 845  |  Pages indexed: 10
+  (note: build is slow due to 6-second politeness delay between pages)
+  For the video, use 'load' after one prior build -- much faster.
+
+print good:
+  Word: "good"
+  Found on X page(s):
+    <url> frequency: N  positions: [...]
+
+print nonsense:
+  No index entry found for "nonsense".
+
+find indifference:
+  Found 1 page(s) for query: indifference
+
+find good friends:
+  Found X page(s) for query: good, friends
+  (shows AND logic -- only pages containing BOTH words)
+
+find bananaaaaa:
+  No pages found containing all of: bananaaaaa.
+
+find (no terms):
+  Please provide at least one search term.
+
+stats:
+  Pages indexed : 10
+  Unique terms  : 845
+  Index path    : data/index.json
+
+git log:
+  * da62368 (HEAD -> main, origin/main) chore: add verification scripts and compiled index
+  * 5bd1376 docs: polish README with setup usage and design rationale
+  * 160b821 test: expand coverage for search tool components
+  * 6d4e38c feat: add interactive command-line shell
+  * 6b36a7b feat: implement print and find search logic
+  * 5a15837 feat: add JSON index persistence
+  * ed33073 feat: build inverted index with word statistics
+  * af3a28a feat: implement polite crawler for quotes site
+  * aec9964 chore: add initial search tool skeleton
+  * adbffe1 Initial project scaffold for COMP3011 CW2 Search Engine Tool
