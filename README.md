@@ -186,8 +186,8 @@ Word: "indifference"
 If the word is not in the index:
 
 ```
->> print nonsense
-No index entry found for "nonsense".
+>> print xyzzy
+No index entry found for "xyzzy".
 ```
 
 ### `find <query terms>`
