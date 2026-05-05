@@ -21,10 +21,12 @@ The tool is built entirely in Python using `requests` for HTTP, `BeautifulSoup` 
 - Inverted index storing per-document word frequency and token positions
 - Case-insensitive tokenisation
 - Single-word lookup: frequency and position data
-- Multi-word search with AND logic and combined-frequency ranking
+- Multi-word search with AND logic and TF-IDF ranked results
+- Proximity-aware scoring bonus for co-located query terms
+- Query suggestions via `difflib` for misspelled or near-miss terms
 - JSON persistence to `data/index.json`
-- Interactive command-line shell
-- 95 unit tests with 98% line coverage
+- Interactive command-line shell with `benchmark` and enhanced `stats`
+- 117 unit and integration tests with 97% line coverage
 
 ---
 
@@ -337,21 +339,98 @@ pytest --cov=src --cov-report=term-missing
 |---|---|
 | `src/crawler.py` | 98% |
 | `src/indexer.py` | 100% |
-| `src/search.py` | 100% |
+| `src/search.py` | 99% |
 | `src/storage.py` | 100% |
-| `src/main.py` | 96% |
-| **Total** | **98%** |
+| `src/main.py` | 95% |
+| **Total** | **97%** |
 
 ### What the tests cover
 
 - **Crawler:** follows next links, collects multiple pages, avoids duplicates, calls the sleeper between requests, handles `RequestException` gracefully, ignores external-domain links, sets a User-Agent header.
-- **Indexer:** excludes `<script>`/`<style>` content, lowercases and strips punctuation, records correct frequencies and positions, handles multiple documents, round-trip serialisation.
-- **Search:** single-word and multi-word queries, case-insensitive matching, AND intersection logic, frequency-based ranking, empty and missing queries, output formatting.
+- **Indexer:** excludes `<script>`/`<style>` content, lowercases and strips punctuation, records correct frequencies and positions, handles multiple documents, round-trip serialisation, `built_at` timestamp persistence.
+- **Search:** single-word and multi-word queries, case-insensitive matching, AND intersection logic, TF-IDF ranking, IDF advantage for rare terms, proximity bonus (close vs. far terms), single-term zero bonus, query suggestions for typos, no spurious suggestions for gibberish, output formatting.
 - **Storage:** creates files and parent directories, writes indented JSON, raises `FileNotFoundError` for missing files, raises `ValueError` for corrupt JSON.
-- **Main:** all CLI helper functions, interactive shell commands (help, build, load, print, find, stats, exit, unknown input, empty input, EOF), one-shot command dispatch.
-- **Integration:** a complete fake-crawl-to-search pipeline using in-memory HTML pages, covering index building, search, ranking, and round-trip JSON serialisation.
+- **Main:** all CLI helper functions, interactive shell commands (help, build, load, print, find, stats, benchmark, exit, unknown input, empty input, EOF), one-shot dispatch, benchmark output fields, enhanced stats fields.
+- **Integration:** a complete fake-crawl-to-search pipeline using in-memory HTML pages, covering index building, TF-IDF search, ranking, and round-trip JSON serialisation.
 
 All unit tests use mocked HTTP sessions and patched sleep functions. No test contacts the live website or waits any real time.
+
+---
+
+## Advanced Search Features
+
+### TF-IDF Ranking
+
+Raw frequency counting treats every word equally regardless of how common it is across the corpus. A word like "the" appearing three times in a document is far less informative than "indifference" appearing once. TF-IDF (Term Frequency -- Inverse Document Frequency) corrects for this.
+
+The formula used:
+
+```
+tf(t, doc)   = raw frequency of term t in document doc
+idf(t)       = log( (1 + N) / (1 + df(t)) ) + 1
+tfidf(t,doc) = tf(t, doc) * idf(t)
+score(doc)   = sum( tfidf(t, doc) ) for all query terms t
+```
+
+Where `N` is the total number of indexed documents and `df(t)` is the number of documents containing term `t`. The `+1` smoothing keeps IDF at least 1 for terms present in every document, preventing zero scores.
+
+This is implemented in `SearchEngine._idf()` and `SearchEngine._tfidf()` in `src/search.py`. The raw frequency sum is still included in results as `score` for reference.
+
+### Proximity-Aware Scoring
+
+For multi-word queries, a small proximity bonus rewards documents where the query terms appear close together in the text:
+
+```
+proximity_bonus = PROXIMITY_ALPHA / (1 + min_distance)
+```
+
+Where `min_distance` is the smallest gap (in token positions) between any two query terms in the document, using the position data stored during indexing. `PROXIMITY_ALPHA = 0.5` keeps the bonus well below typical TF-IDF scores -- it acts as a tiebreaker rather than overriding the main score.
+
+The final ranking key is `final_score = tfidf_score + proximity_bonus`.
+
+Complexity: O(P^2) in stored positions per document. For the small pages on quotes.toscrape.com this is negligible.
+
+### Query Suggestions
+
+When a search returns no results and one or more query terms are absent from the index, the tool automatically suggests close matches using `difflib.get_close_matches` from the Python standard library:
+
+```
+>> find frend
+No pages found containing all of: frend.
+  Did you mean "friend" instead of "frend"?
+```
+
+Suggestions are generated per missing term and shown below the not-found message. Complexity: O(V) in vocabulary size.
+
+### Benchmarking
+
+The `benchmark` command runs 1000 repetitions of several sample queries against the loaded index and reports timing, without making any network requests:
+
+```
+>> benchmark
+Index benchmark
+  Documents         : 10
+  Unique terms      : 845
+  Total postings    : 1807
+  Avg postings/term : 2.1
+
+  Query timing (1000 repetitions each):
+    'love'              :   94.6 ms total  /  0.095 ms avg
+    'good'              :   61.8 ms total  /  0.062 ms avg
+```
+
+This gives concrete evidence of index lookup speed and supports the claim that O(1) dictionary access keeps single-term queries extremely fast even with TF-IDF scoring.
+
+### Complexity Analysis
+
+| Operation | Complexity | Notes |
+|---|---|---|
+| Word lookup (`get_word`) | O(1) average | Python dictionary hash lookup |
+| Single-term `find` | O(D) | D = documents containing the term |
+| Multi-term `find` | O(T * D) | T = query terms; AND intersection then scoring |
+| Proximity scoring | O(P^2) | P = total positions across query terms per doc |
+| Query suggestions | O(V) | V = vocabulary size; scans all indexed words |
+| `stats` top terms | O(V log V) | Sort over vocabulary |
 
 ---
 
@@ -378,10 +457,11 @@ This declaration is made honestly in accordance with the COMP3011 academic integ
 ## Limitations and Future Improvements
 
 - **Tokenisation:** the current `[a-z0-9]+` regex discards punctuation entirely. A more sophisticated tokeniser could handle hyphenated words or apostrophes.
-- **Ranking:** results are ranked by raw combined term frequency. A TF-IDF or BM25 scoring model would give more meaningful rankings on larger corpora.
-- **Crawl scope:** the crawler only follows `li.next` pagination links. Internal links to individual quote pages or author pages are not followed.
+- **Ranking:** TF-IDF with proximity is implemented. A BM25 model would handle document-length normalisation more rigorously on larger corpora.
+- **Crawl scope:** the crawler only follows `li.next` pagination links. Internal links to individual quote or author pages are not followed.
 - **No stemming:** "run", "running", and "runs" are treated as distinct terms. A stemmer (e.g. Porter Stemmer) would improve recall.
-- **Single-threaded:** the crawler fetches one page at a time. Asynchronous fetching (e.g. `aiohttp`) would be faster, though politeness constraints already limit throughput.
+- **Single-threaded:** the crawler fetches one page at a time. Asynchronous fetching (e.g. `aiohttp`) would reduce wall-clock time, though the politeness delay already limits throughput regardless.
+- **Proximity scoring cost:** the O(P^2) proximity calculation is fine for this site's small pages. It would need optimisation (e.g. sorted-merge of position lists) for larger corpora.
 
 ---
 

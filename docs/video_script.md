@@ -1,6 +1,6 @@
 # COMP3011 CW2 -- Video Script
 
-**Target length:** 5 minutes
+**Target length:** 5 minutes (advanced features add ~25 seconds; trim GenAI section slightly if needed)
 **Format:** Screen recording with voiceover
 
 ---
@@ -39,23 +39,31 @@ python -m src.main
 
 **[Type `find indifference`]**
 
-"The `find` command searches for pages containing a term and shows the score, which is based on combined frequency."
+"The `find` command searches for pages containing a term. Results are ranked using TF-IDF -- rare terms are weighted more heavily than common ones."
 
 **[Type `find good friends`]**
 
-"For multi-word queries, only pages containing all terms are returned. This is AND logic. The results are ranked by combined frequency across both terms."
+"For multi-word queries, only pages containing all terms are returned -- AND logic. The output shows the TF-IDF score, a proximity bonus for terms that appear close together, and the final combined score."
+
+**[Type `find frend`]**
+
+"If a query term isn't in the index but something similar is, the tool suggests the closest match. That's using Python's difflib module against the full vocabulary."
 
 **[Type `find bananaaaaa`]**
 
-"A word that doesn't exist in the corpus returns a clean message."
+"A completely unrecognisable term returns a clean message with no spurious suggestion."
 
 **[Type `find` with no terms]**
 
-"An empty query is handled gracefully -- no crash, just a helpful prompt."
+"An empty query is handled gracefully."
 
 **[Type `stats`]**
 
-"The stats command shows a quick summary of the loaded index."
+"The stats command now shows total postings, the top ten terms by corpus frequency, and a timestamp if the index was built with the current version."
+
+**[Type `benchmark`]**
+
+"The benchmark command runs one thousand repetitions of several sample queries and reports timing. No network requests -- it just measures how fast the index lookup and TF-IDF scoring actually are. Sub-millisecond per query, which is what you'd expect from O(1) dictionary access."
 
 **[Type `exit`]**
 
@@ -75,7 +83,7 @@ python -m src.main
 
 **[Open `src/search.py`]**
 
-"The searcher normalises the query with the same tokeniser so search is always case-insensitive. For multi-word queries, it intersects the URL sets across all terms and scores each candidate by summing the per-term frequencies. Results come back sorted highest score first."
+"The searcher normalises the query with the same tokeniser so search is always case-insensitive. For multi-word queries, it intersects the URL sets across all terms -- AND logic -- then scores each candidate using TF-IDF. IDF gives rare terms a higher weight, so a page with one occurrence of 'indifference' can outrank a page with three occurrences of 'the'. A proximity bonus uses the stored position data to reward documents where the query terms appear close together. The bonus is capped small enough that it's a tiebreaker, not a score override."
 
 **[Open `src/storage.py`]**
 
