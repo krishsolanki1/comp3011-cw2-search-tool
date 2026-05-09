@@ -1,74 +1,12 @@
 # COMP3011 Coursework 2 — Search Engine Tool
 
-## Project Overview
+## Overview
 
-This project is a command-line search engine tool developed for COMP3011 Web Services and Web Data (Year 3). The tool crawls a target website, builds an inverted index from the scraped content, and supports word-frequency queries and full-text search over the indexed data.
+A command-line search engine tool developed for COMP3011 Web Services and Web Data (Year 3, 2025–2026). The tool crawls a target website, builds an inverted index from the scraped content, and supports word-frequency queries and ranked full-text search.
 
 Target website: [https://quotes.toscrape.com/](https://quotes.toscrape.com/)
 
-> **Status:** Project structure initialised. Implementation not yet started.
-
----
-
-## Planned Features
-
-- Web crawler to scrape pages from the target website
-- Inverted index builder storing word frequencies and source URLs
-- Persistent index stored as `data/index.json`
-- CLI commands:
-  - `build` — crawl the website and build the index
-  - `load` — load an existing index from disk
-  - `print <word>` — display the frequency and locations of a given word
-  - `find <query terms>` — search the index and return ranked results
-
----
-
-## Planned Setup
-
-Requirements:
-- Python 3.9+
-- pip
-
-```bash
-# Clone the repository
-git clone https://github.com/<your-username>/comp3011-cw2-search-tool.git
-cd comp3011-cw2-search-tool
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
----
-
-## Planned Usage
-
-```bash
-# Build the index by crawling the website
-python -m src build
-
-# Load an existing index
-python -m src load
-
-# Print frequency info for a word
-python -m src print <word>
-
-# Search for pages matching query terms
-python -m src find <query terms>
-```
-
----
-
-## Planned Testing
-
-Tests will be written using `pytest` and located in the `tests/` directory. Coverage will be measured with `pytest-cov`.
-
-```bash
-# Run tests
-pytest
-
-# Run tests with coverage report
-pytest --cov=src
-```
+> **Status:** Project skeleton complete. Implementation in progress.
 
 ---
 
@@ -76,21 +14,89 @@ pytest --cov=src
 
 ```
 comp3011-cw2-search-tool/
-├── src/               # Main source code
-├── tests/             # Unit and integration tests
-├── data/              # Generated index file (index.json)
-├── docs/              # Additional documentation
-├── requirements.txt   # Python dependencies
-└── README.md          # This file
+├── src/
+│   ├── __init__.py
+│   ├── crawler.py      # Web crawler
+│   ├── indexer.py      # Inverted index builder
+│   ├── search.py       # Query and ranking logic
+│   ├── storage.py      # JSON persistence
+│   └── main.py         # CLI entry point
+├── tests/
+│   ├── test_crawler.py
+│   ├── test_indexer.py
+│   ├── test_search.py
+│   └── test_storage.py
+├── data/
+│   └── index.json      # Generated index (created at runtime)
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## GenAI Declaration
+## Setup
 
-This project may involve the use of Generative AI tools (e.g. GitHub Copilot, Claude) during development. All AI-assisted contributions will be declared here upon submission, in accordance with the module's academic integrity guidelines.
+Requirements: Python 3.9+
 
-> *Declaration to be completed before final submission.*
+```bash
+git clone https://github.com/krishsolanki1/comp3011-cw2-search-tool.git
+cd comp3011-cw2-search-tool
+pip install -r requirements.txt
+```
+
+---
+
+## Usage
+
+```bash
+# Crawl the website and build the index
+python -m src.main build
+
+# Load an existing index from disk
+python -m src.main load
+
+# Print frequency and location info for a word
+python -m src.main print <word>
+
+# Search the index for pages matching query terms
+python -m src.main find <query terms>
+```
+
+---
+
+## Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=src --cov-report=term-missing
+```
+
+---
+
+## Design
+
+*To be completed during implementation.*
+
+Key components:
+- **Crawler** — uses `requests` and `BeautifulSoup` to follow links from the base URL up to a configurable page limit.
+- **Indexer** — builds an inverted index mapping each word to the URLs and frequency counts where it appears.
+- **Searcher** — scores and ranks pages for multi-term queries; supports single-word lookup.
+- **Storage** — serialises and deserialises the index as `data/index.json`.
+
+---
+
+## Limitations
+
+*To be completed after implementation.*
+
+---
+
+## GenAI Usage Declaration
+
+This project was developed with assistance from Generative AI tools. A full declaration — including which tools were used, for which tasks, and how outputs were reviewed and adapted — will be provided before final submission, in accordance with the COMP3011 academic integrity guidelines.
 
 ---
 
@@ -98,4 +104,5 @@ This project may involve the use of Generative AI tools (e.g. GitHub Copilot, Cl
 
 Student: Krish Solanki  
 Module: COMP3011 Web Services and Web Data  
+University of Nottingham  
 Academic Year: 2025–2026
