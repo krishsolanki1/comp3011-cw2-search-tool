@@ -1,13 +1,17 @@
-"""Tests for main.py CLI helpers and one-shot entry point.
+"""Tests for main.py: CLI helpers, one-shot entry point, and storage helpers.
 
 All tests are unit-level: no live network requests, no real sleeps,
-no writes to the real data/ directory.
+no writes to the real data/ directory (tmp_path used for storage tests).
 """
 
+import json
 from unittest.mock import MagicMock, patch
 
 from src.indexer import InvertedIndex
-from src.main import _benchmark, _build, _find, _load, _print_word, _stats, main
+from src.main import (
+    _benchmark, _build, _find, _load, _print_word, _stats, main,
+    index_exists, load_index, save_index,
+)
 from src.search import SearchEngine
 
 # ---------------------------------------------------------------------------
@@ -495,3 +499,82 @@ def test_stats_omits_built_at_when_absent(capsys):
     _stats(engine)
     out = capsys.readouterr().out
     assert "Built at" not in out
+
+
+# ---------------------------------------------------------------------------
+# Storage helpers (save_index, load_index, index_exists)
+# ---------------------------------------------------------------------------
+
+SAMPLE_INDEX = {
+    "index": {
+        "hello": {
+            "https://example.com/": {"frequency": 2, "positions": [0, 5]}
+        }
+    },
+    "docs": {
+        "https://example.com/": {"word_count": 10, "title": "Example"}
+    },
+}
+
+
+def test_save_creates_file(tmp_path):
+    dest = tmp_path / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    assert dest.exists()
+
+
+def test_save_writes_valid_json(tmp_path):
+    dest = tmp_path / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    loaded = json.loads(dest.read_text(encoding="utf-8"))
+    assert loaded == SAMPLE_INDEX
+
+
+def test_save_json_is_indented(tmp_path):
+    dest = tmp_path / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    assert "\n" in dest.read_text(encoding="utf-8")
+
+
+def test_save_creates_parent_directories(tmp_path):
+    dest = tmp_path / "nested" / "deep" / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    assert dest.exists()
+
+
+def test_load_returns_correct_data(tmp_path):
+    dest = tmp_path / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    assert load_index(dest) == SAMPLE_INDEX
+
+
+def test_load_round_trip_preserves_structure(tmp_path):
+    dest = tmp_path / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    result = load_index(dest)
+    assert result["index"]["hello"]["https://example.com/"]["frequency"] == 2
+    assert result["docs"]["https://example.com/"]["title"] == "Example"
+
+
+def test_load_missing_file_raises_file_not_found(tmp_path):
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        load_index(tmp_path / "does_not_exist.json")
+
+
+def test_load_corrupt_json_raises_value_error(tmp_path):
+    import pytest
+    dest = tmp_path / "index.json"
+    dest.write_text("{ this is not valid json !!!", encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_index(dest)
+
+
+def test_index_exists_true_when_present(tmp_path):
+    dest = tmp_path / "index.json"
+    save_index(SAMPLE_INDEX, dest)
+    assert index_exists(dest) is True
+
+
+def test_index_exists_false_when_missing(tmp_path):
+    assert index_exists(tmp_path / "does_not_exist.json") is False
