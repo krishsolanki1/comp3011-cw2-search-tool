@@ -91,6 +91,22 @@ pip install -r requirements.txt
 | `pytest` | Test runner |
 | `pytest-cov` | Coverage reporting |
 
+### Quick verification scripts
+
+Two scripts are provided to set up a virtual environment, install dependencies, and run the test suite in one step.
+
+**Linux / macOS:**
+
+```bash
+bash verify.sh
+```
+
+**Windows PowerShell:**
+
+```powershell
+.\verify.ps1
+```
+
 ---
 
 ## Running the Tool
