@@ -29,7 +29,7 @@ load
 
 print good
 
-print nonsense
+print xyzzy
 
 find indifference
 
@@ -73,8 +73,8 @@ print good:
   Found on X page(s):
     <url> frequency: N  positions: [...]
 
-print nonsense:
-  No index entry found for "nonsense".
+print xyzzy:
+  No index entry found for "xyzzy".
 
 find indifference:
   Found 1 page(s) for query: indifference

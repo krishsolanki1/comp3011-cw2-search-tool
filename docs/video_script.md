@@ -33,7 +33,7 @@ python -m src.main
 
 "The `print` command shows the inverted index entry for a word -- which pages it appears on, the frequency on each page, and the exact token positions."
 
-**[Type `print nonsense`]**
+**[Type `print xyzzy`]**
 
 "If the word isn't in the index, it tells me clearly rather than silently returning nothing."
 
