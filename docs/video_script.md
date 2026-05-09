@@ -99,7 +99,7 @@ python -m src.main
 pytest --cov=src --cov-report=term-missing
 ```
 
-"Ninety-five tests, ninety-eight percent line coverage. The crawler tests mock the HTTP session entirely and replace the sleep function, so they run in milliseconds. The indexer tests check tokenisation, frequency counts, position accuracy, multiple documents, and round-trip serialisation. The search tests cover single and multi-word queries, case insensitivity, AND logic, ranking order, and output formatting. There is also an integration test that runs a complete fake pipeline -- fake HTML pages in, search results out -- without touching the network at all."
+"One hundred and seventeen tests, ninety-seven percent line coverage. The crawler tests mock the HTTP session entirely and replace the sleep function, so they run in milliseconds. The indexer tests check tokenisation, frequency counts, position accuracy, multiple documents, and round-trip serialisation. The search tests cover single and multi-word queries, case insensitivity, AND logic, ranking order, and output formatting. There is also an integration test that runs a complete fake pipeline -- fake HTML pages in, search results out -- without touching the network at all."
 
 ---
 

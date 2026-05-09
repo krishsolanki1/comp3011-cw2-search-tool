@@ -91,21 +91,30 @@ find bananaaaaa:
   No pages found containing all of: bananaaaaa.
 
 find (no terms):
-  Please provide at least one search term.
+  Usage: find <query terms>
 
 stats:
-  Pages indexed : 10
-  Unique terms  : 845
-  Index path    : data/index.json
+  Pages indexed  : 10
+  Unique terms   : 845
+  Total postings : 1807
+  Index path     : data\index.json
+  Built at       : (UTC timestamp)
+
+  Top 10 terms by corpus frequency:
+     1. by                   125
+     2. tags                 107
+     ...
 
 git log:
-  * da62368 (HEAD -> main, origin/main) chore: add verification scripts and compiled index
-  * 5bd1376 docs: polish README with setup usage and design rationale
-  * 160b821 test: expand coverage for search tool components
-  * 6d4e38c feat: add interactive command-line shell
-  * 6b36a7b feat: implement print and find search logic
-  * 5a15837 feat: add JSON index persistence
-  * ed33073 feat: build inverted index with word statistics
-  * af3a28a feat: implement polite crawler for quotes site
-  * aec9964 chore: add initial search tool skeleton
-  * adbffe1 Initial project scaffold for COMP3011 CW2 Search Engine Tool
+  * 1f61ddb (HEAD -> main, origin/main) fix: correct university name in README
+  * 36ca8c9 chore: rebuild index with built_at timestamp
+  * 661a65f docs: update README and docs for advanced features
+  * 01e9dc4 test: add tests for ranking and benchmark features
+  * 739f163 feat: add benchmark and query suggestion commands to CLI
+  * eb3b83f feat: add TF-IDF ranking and result scoring to search engine
+  * 6bad807 chore: final submission audit and polish
+  * f09089f docs: add demo commands, video script and marking checklist
+  * 4b21232 chore: build and commit compiled search index
+  * a6c0ff0 chore: add shell and PowerShell verification scripts
+  * 741625b docs: polish README with setup, usage and design rationale
+  * 6ab8b4d test: expand coverage for main module
