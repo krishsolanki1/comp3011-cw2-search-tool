@@ -1,0 +1,329 @@
+COMP3011 CW2 -- Video Demo Script
+Target length: ~5 minutes
+Format: Screen recording with voiceover
+===========================================================
+
+
+[0:00-0:20] INTRODUCTION
+----------------------------------------------------------
+
+"Hi, I'm Krish Solanki, this is my COMP3011 Coursework 2 submission. I've
+built a command-line search engine in Python that crawls quotes.toscrape.com,
+builds an inverted index, and supports word-frequency lookups and multi-term
+ranked search. I'll walk through a live demo, the code design, the tests, and
+how I used AI tools."
+
+
+[0:20-0:35] OPEN THE SHELL
+----------------------------------------------------------
+
+Command:
+  python -m src.main
+
+Expected output:
+  ============================================================
+    COMP3011 Search Engine Tool
+    Target: https://quotes.toscrape.com/
+  ============================================================
+  Type 'help' for available commands.
+
+  >>
+
+Type 'help'.
+
+Say:
+"The shell supports build, load, print, find, stats, benchmark, and exit."
+
+
+[0:35-1:00] BUILD AND LOAD
+----------------------------------------------------------
+
+Type 'build'. After 2-3 seconds press Ctrl+C.
+
+Expected output:
+  Starting crawl of https://quotes.toscrape.com/ (delay=6s between pages)...
+  Crawl cancelled.
+
+Say:
+"The build command crawls the site and saves the index to disk. There's a
+6-second politeness delay between each page fetch to avoid hammering the
+server. The brief says to crawl the target website, which most naturally
+means the quote listing pages -- but the site also has an author biography
+page for every quoted person. The brief is ambiguous on scope, so for
+thoroughness the crawler follows both: it works through all the pagination
+links first, collecting any author page URLs it finds along the way, then
+fetches each author page in a second pass. That gives a richer index covering
+both the quotes and the author descriptions. For the rest of the demo I'll
+load the pre-built index instead, which is instant."
+
+Type 'load'.
+
+Expected output:
+  Index loaded from data\index.json.
+  Unique terms: 845  |  Pages indexed: 10
+
+Say:
+"Ten pages indexed, 845 unique terms."
+
+
+[1:00-1:30] BASIC FEATURE -- PRINT
+----------------------------------------------------------
+
+Type 'print indifference'.
+
+Expected output:
+  Word: "indifference"
+    Found on 1 page(s):
+      https://quotes.toscrape.com/page/2/
+        frequency : 5
+        positions : [496, 506, 516, 527, 536]
+
+Say:
+"The print command looks up a word in the inverted index and shows which pages
+it appears on, how many times, and the exact token positions. Those positions
+are stored at indexing time and used later for proximity scoring."
+
+Type 'print xyzzy'.
+
+Expected output:
+  No index entry found for "xyzzy".
+
+Say:
+"If the word isn't in the index you get a clean message rather than an empty
+result or a crash."
+
+
+[1:30-2:15] CORE SEARCH FEATURE -- FIND
+----------------------------------------------------------
+
+Type 'find indifference'.
+
+Expected output:
+  Found 1 page(s) for query: indifference
+
+    1. https://quotes.toscrape.com/page/2/
+       tfidf score    : 13.5237
+       proximity bonus: 0.0
+       final score    : 13.5237
+       'indifference': 5 occurrence(s)
+
+Say:
+"The find command ranks results using TF-IDF. The score is high here because
+indifference is a rare term -- it only appears on one page -- so its IDF
+weight is at its maximum."
+
+Type 'find good friends'.
+
+Expected output:
+  Found 6 page(s) for query: good, friends
+
+    1. https://quotes.toscrape.com/page/2/
+       tfidf score    : 13.356
+       proximity bonus: 0.25
+       final score    : 13.606
+       'good'      : 3 occurrence(s)
+       'friends'   : 9 occurrence(s)
+    2. https://quotes.toscrape.com/page/6/
+       tfidf score    : 4.452
+       proximity bonus: 0.0122
+       final score    : 4.4642
+       'good'      : 1 occurrence(s)
+       'friends'   : 3 occurrence(s)
+    3. https://quotes.toscrape.com/page/7/
+       tfidf score    : 3.904
+       proximity bonus: 0.0036
+       final score    : 3.9075
+       'good'      : 2 occurrence(s)
+       'friends'   : 1 occurrence(s)
+    ... (6 results total)
+
+Say:
+"For multi-word queries, only pages containing all the terms are returned --
+AND logic. Results are ranked by TF-IDF score. Page 2 also gets a proximity
+bonus of 0.25, which is the maximum -- that means good and friends appear
+directly adjacent somewhere on that page. The proximity bonus is capped small
+enough to act as a tiebreaker rather than overriding the TF-IDF score."
+
+
+[2:15-2:40] ADVANCED FEATURE -- QUERY SUGGESTIONS AND ERROR HANDLING
+----------------------------------------------------------
+
+Type 'find frend'.
+
+Expected output:
+  No pages found containing all of: frend.
+    Did you mean "friend" instead of "frend"?
+
+Say:
+"If a query term isn't in the index but something close is, the tool suggests
+the nearest match using Python's difflib module checked against the full
+vocabulary."
+
+Type 'find bananaaaaa'.
+
+Expected output:
+  No pages found containing all of: bananaaaaa.
+
+Say:
+"Something completely unrecognisable gets a clean not-found message with no
+misleading suggestion."
+
+Type 'find' with no terms.
+
+Expected output:
+  Usage: find <query terms>
+
+Say:
+"Empty input is handled gracefully."
+
+
+[2:40-3:00] STATS AND BENCHMARK
+----------------------------------------------------------
+
+Type 'stats'.
+
+Expected output:
+  Pages indexed  : 10
+  Unique terms   : 845
+  Total postings : 1807
+  Index path     : data\index.json
+  Built at       : 2026-05-09T...
+
+  Top 10 terms by corpus frequency:
+     1. by                   125
+     2. tags                 107
+     3. about                105
+     4. you                  103
+     5. to                   88
+     6. the                  76
+     7. a                    70
+     8. is                   69
+     9. it                   58
+    10. i                    58
+
+Say:
+"Stats shows the index size, total postings, when it was built, and the top
+ten terms by corpus frequency. These are the most common words on the site --
+not very useful for search, which is exactly why TF-IDF down-weights them."
+
+Type 'benchmark'.
+
+Expected output:
+  Index benchmark
+    Documents         : 10
+    Unique terms      : 845
+    Total postings    : 1807
+    Avg postings/term : 2.1
+
+    Query timing (1000 repetitions each):
+      'love'              :   64.7 ms total  /  0.065 ms avg
+      'good'              :   44.2 ms total  /  0.044 ms avg
+      'life'              :   60.5 ms total  /  0.061 ms avg
+      'the'               :   71.6 ms total  /  0.072 ms avg
+
+Say:
+"The benchmark runs 1000 repetitions of sample queries against the loaded
+index and reports timing. No network requests -- this is purely measuring the
+in-memory lookup and TF-IDF scoring. Under a tenth of a millisecond per
+query, which is what you'd expect from O(1) dictionary access."
+
+Type 'exit'.
+
+
+[3:00-4:00] CODE WALKTHROUGH
+----------------------------------------------------------
+
+Open src/crawler.py.
+
+Say:
+"The crawler uses requests and BeautifulSoup. It follows the li.next
+pagination link, converts relative URLs to absolute with urljoin, and checks
+the netloc matches the base domain to prevent following external links. It
+sleeps for six seconds between fetches. The sleep function is injected as a
+parameter so tests can replace it with a no-op -- no test ever actually
+waits."
+
+Open src/indexer.py.
+
+Say:
+"The indexer strips script, style, head, and noscript tags from the HTML then
+tokenises the remaining text using the regex [a-z0-9]+ -- which lowercases
+everything and drops punctuation in one step. Each token's position in the
+document is recorded alongside its frequency, so the index stores both."
+
+Open src/search.py.
+
+Say:
+"The search engine normalises queries with the same tokeniser so search is
+always case-insensitive. For multi-word queries it intersects the URL sets
+for all terms -- AND logic -- then scores each result using TF-IDF. IDF
+weights rare terms more heavily, so a page with one occurrence of
+indifference can outrank a page with three occurrences of the. The proximity
+bonus uses the stored position data to reward documents where query terms
+appear close together."
+
+
+[4:00-4:20] TESTS
+----------------------------------------------------------
+
+Command:
+  pytest --cov=src --cov-report=term-missing
+
+Expected output:
+  117 passed
+
+  Name              Stmts   Miss  Cover
+  -----------------------------------------------
+  src\crawler.py       50      1    98%
+  src\indexer.py       45      0   100%
+  src\main.py         175      8    95%
+  src\search.py        98      1    99%
+  -----------------------------------------------
+  TOTAL               368     10    97%
+
+Say:
+"117 tests, 97% line coverage. The crawler tests mock the HTTP session
+entirely and swap out the sleep function. The search tests cover TF-IDF
+ranking, proximity scoring, query suggestions, AND logic, and case
+insensitivity. There's also an integration test that runs a complete fake
+pipeline -- fake HTML pages in, search results out -- without touching the
+network."
+
+
+[4:20-4:35] GIT HISTORY
+----------------------------------------------------------
+
+Command:
+  git log --oneline --graph --decorate -n 12
+
+Say:
+"The commit history shows the project built up component by component --
+crawler, indexer, search logic, the CLI shell, then tests, documentation, and
+the advanced features on top."
+
+
+[4:35-5:00] GENAI REFLECTION
+----------------------------------------------------------
+
+Say:
+"I used Claude as an AI assistant throughout. It was useful for scaffolding
+and for writing test boilerplate quickly. But it also made mistakes I had to
+catch -- the first crawler draft had no domain restriction, so it would have
+followed external links. I added the urlparse check myself after reading the
+requirements carefully. The AI also missed edge cases in the tests on the
+first pass -- no test for an empty query, no test that the sleeper is never
+called on a single-page crawl. I added those because I thought about the
+behaviour.
+
+The most important point is that accepting a suggestion isn't the same as
+understanding it. Every function in this project I can explain, and every
+design decision I can justify. The AI accelerated the work but the
+understanding is mine."
+
+
+[5:00] CLOSE
+----------------------------------------------------------
+
+Say:
+"That's the full submission. The repository is on GitHub, the index is
+committed, and the README has full setup instructions. Thanks."

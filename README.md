@@ -18,6 +18,7 @@ The tool is built entirely in Python using `requests` for HTTP, `BeautifulSoup` 
 ## Features
 
 - Polite web crawler with a configurable delay between requests (default: 6 seconds)
+- Two-phase crawl: quote listing pages followed by author biography pages
 - Inverted index storing per-document word frequency and token positions
 - Case-insensitive tokenisation
 - Single-word lookup: frequency and position data
@@ -26,7 +27,7 @@ The tool is built entirely in Python using `requests` for HTTP, `BeautifulSoup` 
 - Query suggestions via `difflib` for misspelled or near-miss terms
 - JSON persistence to `data/index.json`
 - Interactive command-line shell with `benchmark` and enhanced `stats`
-- 117 unit and integration tests with 97% line coverage
+- 121 unit and integration tests with 97% line coverage
 
 ---
 
@@ -34,15 +35,15 @@ The tool is built entirely in Python using `requests` for HTTP, `BeautifulSoup` 
 
 | Requirement | Implementation |
 |---|---|
-| Crawl the target website | `src/crawler.py` -- follows pagination via `li.next > a` links |
+| Crawl the target website | `src/crawler.py` -- follows pagination links then author biography links |
 | Build an inverted index | `src/indexer.py` -- word frequency and positions per URL |
-| `build` command | Crawls, indexes, and saves to `data/index.json` |
+| `build` command | Crawls all quote and author pages, indexes, and saves to `data/index.json` |
 | `load` command | Loads `data/index.json` and initialises the search engine |
 | `print <word>` command | Displays frequency and positions for a word |
-| `find <query terms>` command | Returns ranked pages matching all query terms |
-| Politeness | 6-second sleep between successive page fetches |
+| `find <query terms>` command | Returns TF-IDF ranked pages matching all query terms |
+| Politeness | 6-second sleep between every page fetch |
 | Error handling | Network failures print a message and stop gracefully |
-| Testing | `pytest` with `pytest-cov`, 98% line coverage |
+| Testing | `pytest` with `pytest-cov`, 97% line coverage |
 
 ---
 
@@ -52,17 +53,15 @@ The tool is built entirely in Python using `requests` for HTTP, `BeautifulSoup` 
 comp3011-cw2-search-tool/
 ├── src/
 │   ├── __init__.py
-│   ├── crawler.py      # Web crawler -- follows pagination, respects politeness delay
+│   ├── crawler.py      # Web crawler -- pagination + author pages, politeness delay
 │   ├── indexer.py      # Text extraction, tokenisation, inverted index builder
-│   ├── search.py       # Query normalisation, ranked search, output formatting
-│   ├── storage.py      # JSON save/load/exists helpers
-│   └── main.py         # Interactive CLI shell and one-shot entry point
+│   ├── search.py       # Query normalisation, TF-IDF ranking, output formatting
+│   └── main.py         # Interactive CLI shell, storage helpers, one-shot entry point
 ├── tests/
-│   ├── test_crawler.py   # 10 tests
+│   ├── test_crawler.py   # 14 tests
 │   ├── test_indexer.py   # 18 tests
-│   ├── test_search.py    # 22 tests
-│   ├── test_storage.py   # 10 tests
-│   └── test_main.py      # 35 tests (includes integration test)
+│   ├── test_search.py    # 36 tests
+│   └── test_main.py      # 53 tests (includes integration test)
 ├── data/
 │   └── index.json        # Generated at runtime by `build` -- required for submission
 ├── requirements.txt
@@ -138,8 +137,9 @@ Type 'help' for available commands.
 | `build` | Crawl the website, build the index, save to `data/index.json` |
 | `load` | Load a previously saved index from `data/index.json` |
 | `print <word>` | Show frequency and positions for a single word |
-| `find <query terms>` | Search for pages matching all query terms |
-| `stats` | Show index summary (pages, terms, path) |
+| `find <query terms>` | Search for pages matching all query terms (TF-IDF ranked) |
+| `stats` | Show detailed index statistics and top terms |
+| `benchmark` | Time sample queries against the loaded index |
 | `help` | Show command list |
 | `exit` / `quit` | Exit the shell |
 
@@ -149,15 +149,17 @@ Type 'help' for available commands.
 
 ### `build`
 
-Crawls all pages of the target site, builds the inverted index, and saves it.
-The 6-second politeness delay is applied between each page fetch.
+Crawls all quote listing pages and author biography pages, builds the inverted
+index, and saves it. The 6-second politeness delay is applied between every
+fetch. With 10 quote pages and approximately 50 author pages the full crawl
+takes around 6 minutes.
 
 ```
 >> build
 Starting crawl of https://quotes.toscrape.com/ (delay=6s between pages)...
-Crawled 11 page(s). Building index...
+Crawled 60 page(s). Building index...
 Index saved to data/index.json.
-Unique terms: 843  |  Pages indexed: 11
+Unique terms: ...  |  Pages indexed: 60
 Index is ready -- you can now use 'print' and 'find'.
 ```
 
@@ -168,7 +170,7 @@ Loads the saved index from `data/index.json` without re-crawling.
 ```
 >> load
 Index loaded from data/index.json.
-Unique terms: 843  |  Pages indexed: 11
+Unique terms: ...  |  Pages indexed: 60
 ```
 
 ### `print <word>`
@@ -180,9 +182,9 @@ appears on, how many times, and at which token positions.
 >> print indifference
 Word: "indifference"
   Found on 1 page(s):
-    https://quotes.toscrape.com/
-      frequency : 1
-      positions : [42]
+    https://quotes.toscrape.com/page/2/
+      frequency : 5
+      positions : [496, 506, 516, 527, 536]
 ```
 
 If the word is not in the index:
@@ -194,26 +196,31 @@ No index entry found for "xyzzy".
 
 ### `find <query terms>`
 
-Returns all pages that contain every query term, ranked by combined frequency.
+Returns all pages that contain every query term, ranked by TF-IDF score.
 Search is case-insensitive.
 
 ```
 >> find indifference
 Found 1 page(s) for query: indifference
 
-  1. https://quotes.toscrape.com/
-     score : 1
-     'indifference': 1 occurrence(s)
+  1. https://quotes.toscrape.com/page/2/
+     tfidf score    : 13.5237
+     proximity bonus: 0.0
+     final score    : 13.5237
+     'indifference': 5 occurrence(s)
 ```
 
 ```
 >> find good friends
-Found 1 page(s) for query: good, friends
+Found 6 page(s) for query: good, friends
 
-  1. https://quotes.toscrape.com/page/4/
-     score : 3
-     'good'   : 2 occurrence(s)
-     'friends': 1 occurrence(s)
+  1. https://quotes.toscrape.com/page/2/
+     tfidf score    : 13.356
+     proximity bonus: 0.25
+     final score    : 13.606
+     'good'      : 3 occurrence(s)
+     'friends'   : 9 occurrence(s)
+  ...
 ```
 
 If no pages match all terms:
@@ -223,13 +230,26 @@ If no pages match all terms:
 No pages found containing all of: good, friends, zzznonsense.
 ```
 
+If a term is close to something in the index:
+
+```
+>> find frend
+No pages found containing all of: frend.
+  Did you mean "friend" instead of "frend"?
+```
+
 ### `stats`
 
 ```
 >> stats
-Pages indexed : 11
-Unique terms  : 843
-Index path    : data/index.json
+Pages indexed  : 60
+Unique terms   : ...
+Total postings : ...
+Index path     : data/index.json
+Built at       : ...
+
+Top 10 terms by corpus frequency:
+   1. ...
 ```
 
 ### One-shot usage (without the interactive shell)
@@ -255,15 +275,15 @@ The index is a nested dictionary mapping each word to a per-URL entry:
 {
   "index": {
     "indifference": {
-      "https://quotes.toscrape.com/": {
-        "frequency": 1,
-        "positions": [42]
+      "https://quotes.toscrape.com/page/2/": {
+        "frequency": 5,
+        "positions": [496, 506, 516, 527, 536]
       }
     }
   },
   "docs": {
-    "https://quotes.toscrape.com/": {
-      "word_count": 312,
+    "https://quotes.toscrape.com/page/2/": {
+      "word_count": 892,
       "title": "Quotes to Scrape"
     }
   }
@@ -284,15 +304,20 @@ A single-word lookup (`get_word`) is an O(1) dictionary lookup. Position data is
 
 ## Crawling and Politeness Policy
 
-The `Crawler` class (`src/crawler.py`) works as follows:
+The `Crawler` class (`src/crawler.py`) operates in two phases:
 
+**Phase 1 -- Quote listing pages:**
 1. Fetches the base URL using a `requests.Session` with a descriptive `User-Agent` header.
-2. Parses the HTML with BeautifulSoup and extracts the `li.next > a` link.
-3. Converts relative next-page URLs to absolute using `urllib.parse.urljoin`.
-4. Before fetching the next page, sleeps for `delay_seconds` (default: 6 seconds).
-5. Stops when there is no next link, a URL has already been visited, or a request fails.
+2. Parses the HTML with BeautifulSoup and extracts the `li.next > a` pagination link.
+3. Converts relative URLs to absolute using `urllib.parse.urljoin`.
+4. Sleeps for `delay_seconds` (default: 6 seconds) before each subsequent fetch.
+5. While following pagination, collects author biography URLs found via `small.author + a` links.
+6. Stops when there is no next link, a URL has already been visited, or a request fails.
 
-**Domain restriction:** The crawler checks that any discovered next link belongs to the same domain as the base URL. External links are silently ignored.
+**Phase 2 -- Author biography pages:**
+7. Fetches each unique author page discovered during Phase 1, with the same politeness delay between each.
+
+**Domain restriction:** All discovered links are checked against the base URL's netloc. External links are silently ignored.
 
 **Error handling:** Any `requests.RequestException` (connection error, timeout, HTTP error) is caught, a message is printed, and the crawl stops cleanly without raising an exception to the caller.
 
@@ -310,14 +335,10 @@ The `Crawler` class (`src/crawler.py`) works as follows:
 
 1. Retrieves the index entry for each term.
 2. Computes the intersection of URLs that appear in every term's entry (AND logic).
-3. For each candidate URL, calculates a score equal to the sum of frequencies across all matched terms.
-4. Returns results sorted by score in descending order.
+3. Scores each candidate URL using TF-IDF and a proximity bonus.
+4. Returns results sorted by final score in descending order.
 
 A page must contain all query terms to appear in results. This avoids irrelevant partial matches.
-
-### Result format
-
-Each result includes the URL, total score, matched terms, and per-term frequency breakdown, making it straightforward to explain during the demonstration video.
 
 ---
 
@@ -340,16 +361,14 @@ pytest --cov=src --cov-report=term-missing
 | `src/crawler.py` | 98% |
 | `src/indexer.py` | 100% |
 | `src/search.py` | 99% |
-| `src/storage.py` | 100% |
 | `src/main.py` | 95% |
 | **Total** | **97%** |
 
 ### What the tests cover
 
-- **Crawler:** follows next links, collects multiple pages, avoids duplicates, calls the sleeper between requests, handles `RequestException` gracefully, ignores external-domain links, sets a User-Agent header.
+- **Crawler:** follows pagination links, follows author biography links, collects multiple pages, deduplicates author URLs across pages, avoids revisiting URLs, calls the sleeper between every fetch, handles `RequestException` gracefully, ignores external-domain links, sets a User-Agent header.
 - **Indexer:** excludes `<script>`/`<style>` content, lowercases and strips punctuation, records correct frequencies and positions, handles multiple documents, round-trip serialisation, `built_at` timestamp persistence.
 - **Search:** single-word and multi-word queries, case-insensitive matching, AND intersection logic, TF-IDF ranking, IDF advantage for rare terms, proximity bonus (close vs. far terms), single-term zero bonus, query suggestions for typos, no spurious suggestions for gibberish, output formatting.
-- **Storage:** creates files and parent directories, writes indented JSON, raises `FileNotFoundError` for missing files, raises `ValueError` for corrupt JSON.
 - **Main:** all CLI helper functions, interactive shell commands (help, build, load, print, find, stats, benchmark, exit, unknown input, empty input, EOF), one-shot dispatch, benchmark output fields, enhanced stats fields.
 - **Integration:** a complete fake-crawl-to-search pipeline using in-memory HTML pages, covering index building, TF-IDF search, ranking, and round-trip JSON serialisation.
 
@@ -409,14 +428,14 @@ The `benchmark` command runs 1000 repetitions of several sample queries against 
 ```
 >> benchmark
 Index benchmark
-  Documents         : 10
-  Unique terms      : 845
-  Total postings    : 1807
-  Avg postings/term : 2.1
+  Documents         : 60
+  Unique terms      : ...
+  Total postings    : ...
+  Avg postings/term : ...
 
   Query timing (1000 repetitions each):
-    'love'              :   94.6 ms total  /  0.095 ms avg
-    'good'              :   61.8 ms total  /  0.062 ms avg
+    'love'              :   xx.x ms total  /  0.0xx ms avg
+    'good'              :   xx.x ms total  /  0.0xx ms avg
 ```
 
 This gives concrete evidence of index lookup speed and supports the claim that O(1) dictionary access keeps single-term queries extremely fast even with TF-IDF scoring.
@@ -458,7 +477,6 @@ This declaration is made honestly in accordance with the COMP3011 academic integ
 
 - **Tokenisation:** the current `[a-z0-9]+` regex discards punctuation entirely. A more sophisticated tokeniser could handle hyphenated words or apostrophes.
 - **Ranking:** TF-IDF with proximity is implemented. A BM25 model would handle document-length normalisation more rigorously on larger corpora.
-- **Crawl scope:** the crawler only follows `li.next` pagination links. Internal links to individual quote or author pages are not followed.
 - **No stemming:** "run", "running", and "runs" are treated as distinct terms. A stemmer (e.g. Porter Stemmer) would improve recall.
 - **Single-threaded:** the crawler fetches one page at a time. Asynchronous fetching (e.g. `aiohttp`) would reduce wall-clock time, though the politeness delay already limits throughput regardless.
 - **Proximity scoring cost:** the O(P^2) proximity calculation is fine for this site's small pages. It would need optimisation (e.g. sorted-merge of position lists) for larger corpora.
@@ -470,4 +488,4 @@ This declaration is made honestly in accordance with the COMP3011 academic integ
 - The `data/index.json` file is generated by running `build` and is required for submission. It is not gitignored.
 - The GitHub repository URL is: [https://github.com/krishsolanki1/comp3011-cw2-search-tool](https://github.com/krishsolanki1/comp3011-cw2-search-tool)
 - The video demonstration link will be provided separately on the submission form.
-- To reproduce the index from scratch, run `python -m src.main build` from the project root with an internet connection.
+- To reproduce the index from scratch, run `python -m src.main build` from the project root with an internet connection. The full crawl takes approximately 6 minutes.

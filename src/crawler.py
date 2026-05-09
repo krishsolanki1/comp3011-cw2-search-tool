@@ -31,10 +31,17 @@ class Crawler:
         self._allowed_host = urlparse(base_url).netloc
 
     def crawl(self) -> dict[str, str]:
-        """Crawl pages starting from base_url and return {url: html} mapping."""
+        """Crawl pages starting from base_url and return {url: html} mapping.
+
+        Phase 1 follows the pagination chain, collecting author page URLs along
+        the way.  Phase 2 fetches each discovered author page.  The politeness
+        delay is applied before every fetch after the first.
+        """
         pages: dict[str, str] = {}
+        author_queue: list[str] = []
         url: str | None = self.base_url
 
+        # Phase 1: follow pagination links
         while url:
             if url in pages:
                 break
@@ -45,12 +52,25 @@ class Crawler:
 
             pages[url] = html
 
+            for author_url in self._author_urls(html, url):
+                if author_url not in pages and author_url not in author_queue:
+                    author_queue.append(author_url)
+
             next_url = self._next_url(html, url)
             if next_url and next_url not in pages:
                 self._sleep(self.delay_seconds)
                 url = next_url
             else:
                 break
+
+        # Phase 2: fetch author pages discovered during pagination
+        for author_url in author_queue:
+            if author_url in pages:
+                continue
+            self._sleep(self.delay_seconds)
+            html = self._fetch(author_url)
+            if html is not None:
+                pages[author_url] = html
 
         return pages
 
@@ -67,6 +87,19 @@ class Crawler:
         except requests.RequestException as exc:
             print(f"[crawler] request failed for {url}: {exc}")
             return None
+
+    def _author_urls(self, html: str, current_url: str) -> list[str]:
+        """Extract author about-page URLs from a quotes page."""
+        soup = BeautifulSoup(html, "html.parser")
+        urls = []
+        for a in soup.select("small.author + a"):
+            href = a.get("href", "")
+            if not href:
+                continue
+            absolute = urljoin(current_url, href)
+            if urlparse(absolute).netloc == self._allowed_host:
+                urls.append(absolute)
+        return urls
 
     def _next_url(self, html: str, current_url: str) -> str | None:
         """Parse the HTML for a 'next' pagination link and return its absolute URL."""

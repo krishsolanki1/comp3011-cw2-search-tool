@@ -72,7 +72,11 @@ _BENCHMARK_QUERIES = ["love", "good", "life", "the", "truth", "world"]
 def _build(engine_ref: list) -> None:
     print(f"Starting crawl of {BASE_URL} (delay=6s between pages)...")
     crawler = Crawler(base_url=BASE_URL, delay_seconds=6)
-    pages = crawler.crawl()
+    try:
+        pages = crawler.crawl()
+    except KeyboardInterrupt:
+        print("\nCrawl cancelled.")
+        return
 
     if not pages:
         print("Crawl returned no pages. Check your network connection.")
