@@ -123,7 +123,9 @@ git log --oneline --graph --decorate -n 12
 
 "The AI wrote test scaffolding quickly, but it missed some edge cases on the first attempt. It didn't initially include a test for an empty query, and it didn't test that the sleeper is never called when there's only one page. I added those because I thought about the behaviour, not because the AI flagged them."
 
-"Probably the most useful thing the AI did was make me articulate my design clearly. When I described what I wanted, the AI would produce something, and reviewing that output forced me to notice where my own thinking had been vague."
+"One challenge was that AI-generated code sometimes looked correct but had subtle issues I had to trace through carefully. The TF-IDF scoring function was a good example -- the formula was right but the smoothing constants weren't justified. I had to read about IDF variants and adjust them deliberately rather than just accepting the output."
+
+"On time: AI did speed up scaffolding and test boilerplate, but debugging AI suggestions that were almost-right actually cost time I hadn't budgeted for. It's not a straight speedup -- it shifts where the time goes."
 
 "The most important thing to say is that accepting a suggestion is not the same as understanding it. Every function in this project I can explain, the tests I can describe, and the design decisions I can justify. The AI accelerated the process but it didn't replace the understanding."
 
