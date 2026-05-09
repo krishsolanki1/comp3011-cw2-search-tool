@@ -306,18 +306,23 @@ the advanced features on top."
 ----------------------------------------------------------
 
 Say:
-"I used Claude as an AI assistant throughout. It was useful for scaffolding
-and for writing test boilerplate quickly. But it also made mistakes I had to
-catch -- the first crawler draft had no domain restriction, so it would have
-followed external links. I added the urlparse check myself after reading the
-requirements carefully. The AI also missed edge cases in the tests on the
-first pass -- no test for an empty query, no test that the sleeper is never
-called on a single-page crawl. I added those because I thought about the
-behaviour.
+"I used two AI tools in this project with different roles. I started by using
+ChatGPT to analyse the requirements and plan the implementation. I described
+the brief to it and used it to break the work down into a sequence of small
+stages -- essentially producing a structured plan before I wrote any code.
 
-The most important point is that accepting a suggestion isn't the same as
-understanding it. Every function in this project I can explain, and every
-design decision I can justify. The AI accelerated the work but the
+I then used Claude Code inside VS Code to work through each stage. I'd give
+it the prompt for that stage, it would produce the implementation, and I'd
+manually review the code before moving on. That review step mattered -- the
+first crawler draft for example had no domain restriction, meaning it would
+have followed any next link regardless of where it pointed. I caught that,
+flagged it, and it was fixed. Throughout the project I was noting things I
+wanted changed, and at the end we did a final pass to address everything I'd
+spotted.
+
+The planning, the reviews, the decisions about what to change, and the final
+corrections were all mine. I can explain every function in this codebase and
+justify every design choice. The tools accelerated the work but the
 understanding is mine."
 
 

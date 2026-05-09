@@ -455,21 +455,30 @@ This gives concrete evidence of index lookup speed and supports the claim that O
 
 ## GenAI Usage Declaration
 
-This project was developed with the assistance of Claude (Anthropic), an AI assistant, acting as a pair-programming tool throughout the development process.
+Two AI tools were used in this project with distinct roles.
 
-**How AI was used:**
+**ChatGPT** was used during the planning phase. Before writing any code, I
+described the coursework requirements to ChatGPT and used it to analyse the
+problem, assess different implementation approaches, and break the work down
+into a sequence of small, manageable stages. This produced a structured
+implementation plan that I could work through one step at a time.
 
-- Generating initial file scaffolding and class skeletons based on described requirements.
-- Suggesting implementations for the crawler pagination logic, tokenisation regex, and inverted index structure.
-- Writing test scaffolding and suggesting edge cases to cover.
-- Reviewing code for clarity, typing, and consistency.
-- Assisting with README structure and wording.
+**Claude Code** (Anthropic, via the VS Code extension) was used for
+implementation. Each stage from the plan was given to Claude Code as a prompt.
+It produced the code for that stage, which I then manually reviewed before
+moving on. Where I spotted issues or things I wanted done differently, I noted
+them and they were addressed in a final review pass at the end of the project.
 
 **Student responsibility:**
 
-All AI-generated code and suggestions were reviewed, tested, and understood before being accepted. The student directed the design decisions, verified correctness against the coursework specification, ran all tests, and can explain every part of the codebase. The AI acted as a tool; the understanding and judgement are the student's own.
+The planning, the review at each stage, the identification of problems, and
+the final corrections were all my own work. I directed both tools throughout
+and made all the design decisions. Every part of the codebase I can read,
+explain, and justify. The AI tools accelerated the implementation but the
+understanding and judgement are mine.
 
-This declaration is made honestly in accordance with the COMP3011 academic integrity guidelines.
+This declaration is made honestly in accordance with the COMP3011 academic
+integrity guidelines.
 
 ---
 
