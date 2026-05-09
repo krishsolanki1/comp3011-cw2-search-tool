@@ -7,7 +7,7 @@ no writes to the real data/ directory.
 from unittest.mock import MagicMock, patch
 
 from src.indexer import InvertedIndex
-from src.main import _build, _find, _load, _print_word, _stats, main
+from src.main import _benchmark, _build, _find, _load, _print_word, _stats, main
 from src.search import SearchEngine
 
 # ---------------------------------------------------------------------------
@@ -412,3 +412,86 @@ def test_full_pipeline_fake_pages():
     restored = InvertedIndex.from_dict(json.loads(serialised))
     engine2 = SearchEngine(restored)
     assert engine2.find("love") == engine.find("love")
+
+
+# ---------------------------------------------------------------------------
+# _benchmark
+# ---------------------------------------------------------------------------
+
+def test_benchmark_no_engine_prints_message(capsys):
+    _benchmark(None)
+    assert "No index loaded" in capsys.readouterr().out
+
+
+def test_benchmark_with_engine_prints_stats(capsys):
+    idx = InvertedIndex()
+    idx.add_document("https://example.com/", PAGE1)
+    idx.add_document("https://example.com/page2/", PAGE2)
+    engine = SearchEngine(idx)
+    _benchmark(engine)
+    out = capsys.readouterr().out
+    assert "Documents" in out
+    assert "Unique terms" in out
+    assert "Total postings" in out
+    assert "Query timing" in out
+
+
+def test_benchmark_with_engine_shows_timing(capsys):
+    idx = InvertedIndex()
+    idx.add_document("https://example.com/", PAGE1)
+    engine = SearchEngine(idx)
+    _benchmark(engine)
+    out = capsys.readouterr().out
+    # Should contain 'ms' timing for at least one query
+    assert "ms" in out
+
+
+def test_benchmark_shell_command_no_engine(capsys):
+    from src.main import run_shell
+    with patch("builtins.input", side_effect=["benchmark", "exit"]):
+        run_shell()
+    assert "No index loaded" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# _stats (advanced -- top terms, total postings)
+# ---------------------------------------------------------------------------
+
+def test_stats_shows_total_postings(capsys):
+    idx = InvertedIndex()
+    idx.add_document("https://example.com/", PAGE1)
+    idx.add_document("https://example.com/page2/", PAGE2)
+    engine = SearchEngine(idx)
+    _stats(engine)
+    out = capsys.readouterr().out
+    assert "Total postings" in out
+
+
+def test_stats_shows_top_terms(capsys):
+    idx = InvertedIndex()
+    idx.add_document("https://example.com/", PAGE1)
+    idx.add_document("https://example.com/page2/", PAGE2)
+    engine = SearchEngine(idx)
+    _stats(engine)
+    out = capsys.readouterr().out
+    assert "Top 10" in out
+
+
+def test_stats_shows_built_at_when_present(capsys):
+    idx = InvertedIndex()
+    idx.add_document("https://example.com/", PAGE1)
+    idx.built_at = "2026-01-01T00:00:00+00:00"
+    engine = SearchEngine(idx)
+    _stats(engine)
+    out = capsys.readouterr().out
+    assert "2026-01-01" in out
+
+
+def test_stats_omits_built_at_when_absent(capsys):
+    idx = InvertedIndex()
+    idx.add_document("https://example.com/", PAGE1)
+    # built_at is None by default
+    engine = SearchEngine(idx)
+    _stats(engine)
+    out = capsys.readouterr().out
+    assert "Built at" not in out

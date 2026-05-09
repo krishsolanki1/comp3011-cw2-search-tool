@@ -1,4 +1,4 @@
-"""Indexer — extracts text, tokenises it, and builds an inverted index."""
+"""Indexer -- extracts text, tokenises it, and builds an inverted index."""
 
 import re
 
@@ -44,11 +44,19 @@ class InvertedIndex:
                 "title": "Page Title"
             }
         }
+
+    Complexity notes:
+    - Word lookup (get_word) is O(1) average -- plain dictionary access.
+    - Building the index is O(T) where T is the total number of tokens across
+      all documents.
+    - Serialisation (to_dict/from_dict) is O(V * D) where V is vocabulary size
+      and D is number of documents.
     """
 
     def __init__(self) -> None:
         self._index: dict[str, dict[str, dict]] = {}
         self._docs: dict[str, dict] = {}
+        self.built_at: str | None = None  # ISO-8601 timestamp, set by main on build
 
     # ------------------------------------------------------------------
     # Public interface
@@ -78,12 +86,18 @@ class InvertedIndex:
             self.add_document(url, html)
 
     def get_word(self, word: str) -> dict:
-        """Return index entry for a word, or an empty dict if not present."""
+        """Return index entry for a word, or an empty dict if not present.
+
+        Complexity: O(1) average (dictionary lookup).
+        """
         return self._index.get(word.lower(), {})
 
     def to_dict(self) -> dict:
         """Serialise the full index and document metadata to a plain dict."""
-        return {"index": self._index, "docs": self._docs}
+        result: dict = {"index": self._index, "docs": self._docs}
+        if self.built_at is not None:
+            result["built_at"] = self.built_at
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "InvertedIndex":
@@ -91,4 +105,5 @@ class InvertedIndex:
         obj = cls()
         obj._index = data.get("index", {})
         obj._docs = data.get("docs", {})
+        obj.built_at = data.get("built_at")
         return obj
